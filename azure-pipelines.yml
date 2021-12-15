@@ -4,23 +4,29 @@ trigger:
 pool:
 vmImage: ubuntu-18.04
  
-steps:
-- task: Maven@3
-displayName: 'Maven pom.xml'
-inputs:
-options: '-DskipITs --settings ./maven/settings.xml'
-mavenPomFile: 'pom.xml'
- 
-- task: CopyFiles@2
-displayName: 'Copy Files'
-inputs:
-SourceFolder: '$(build.sourcesdirectory)'
-Contents: |
-**/target/*.war
-*.sql
-TargetFolder: '$(build.artifactstagingdirectory)'
- 
-- task: PublishBuildArtifacts@1
-displayName: 'Publish Artifact'
-inputs:
-PathtoPublish: '$(build.artifactstagingdirectory)'
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: MavenPackageAndPublishArtifacts
+    displayName: Maven Package and Publish Artifacts
+    pool:
+      vmImage: $(vmImageName)
+    
+    steps:
+    - task: Maven@3
+      displayName: 'Maven Package'
+      inputs:
+        mavenPomFile: 'app/pom.xml'
+
+    - task: CopyFiles@2
+      displayName: 'Copy Files to artifact staging directory'
+      inputs:
+        SourceFolder: '$(System.DefaultWorkingDirectory)'
+        Contents: '**/target/*.?(war|jar)'
+        TargetFolder: $(Build.ArtifactStagingDirectory)
+
+    - task: PublishPipelineArtifact@0
+      displayName: 'Publish pipeline artifacts'
+      inputs:
+        targetPath: $(Build.ArtifactStagingDirectory)
